@@ -8,7 +8,12 @@ import { Eye, Copy } from 'lucide-react';
 import { ReviewForm } from '@/components/reviews/ReviewForm';
 import { toast } from 'sonner';
 
-export function ReviewPreview({ subaccountId }: { subaccountId: string }) {
+interface ReviewPreviewProps {
+  subaccountId: string;
+  disableSubmit?: boolean; // Add disableSubmit prop
+}
+
+export function ReviewPreview({ subaccountId, disableSubmit }: ReviewPreviewProps) {
   const [reviewUrl, setReviewUrl] = useState('');
   
   useEffect(() => {
@@ -53,7 +58,7 @@ export function ReviewPreview({ subaccountId }: { subaccountId: string }) {
           Live Preview
         </div>
         <div className="max-h-[600px] overflow-auto border rounded-lg bg-white">
-          <ReviewForm subaccountId={subaccountId} isPreview={true} />
+          <ReviewForm subaccountId={subaccountId} isPreview={true} disableSubmit={disableSubmit} />
         </div>
       </div>
     </div>

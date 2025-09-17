@@ -3,13 +3,14 @@ import { notFound, redirect } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Star, MessageSquare, ExternalLink, Filter, Calendar, Eye } from 'lucide-react';
+import { Star, MessageSquare, ExternalLink, Filter, Calendar, Eye, QrCode as QrCodeIcon, Download } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ReviewPreview } from '@/components/review-preview';
 import { ReviewSettings } from '@/components/review-settings';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { DashboardCharts } from '@/components/dashboard-charts';
 import { ReviewPageActions } from '@/components/reviews/ReviewPageActions';
+import QRCode from 'qrcode.react'; // Import QRCode component
 
 export default async function SubaccountReviewsPage({
   params,
@@ -31,7 +32,7 @@ export default async function SubaccountReviewsPage({
   // Fetch real reviews from database
   const { data: subaccount, error: subaccountError } = await supabaseAdmin
     .from('subaccounts')
-    .select('id, name')
+    .select('id, name, slug') // Added slug to subaccount select
     .eq('id', params.subaccountId)
     .single();
 
@@ -84,6 +85,9 @@ export default async function SubaccountReviewsPage({
     pending: reviewsData.filter(r => r.status === 'PENDING').length,
     averageRating: reviewsData.length > 0 ? reviewsData.reduce((sum, r) => sum + r.rating, 0) / reviewsData.length : 0,
   };
+
+  // Construct the public review page URL
+  const reviewPageUrl = `${process.env.NEXT_PUBLIC_BASE_URL}/reviews/${subaccount.slug}`; // Use slug for public URL
 
   return (
     <div className="p-6 space-y-6">
@@ -173,7 +177,7 @@ export default async function SubaccountReviewsPage({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center space-x-2 mb-2">
-                          <span className="font-medium">{review.customerName}</span>
+                          <span className="font-medium">{review.customer_name}</span>
                           <div className="flex">
                             {Array.from({ length: 5 }).map((_, i) => (
                               <Star
@@ -326,20 +330,69 @@ export default async function SubaccountReviewsPage({
         </TabsContent>
 
         <TabsContent value="preview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Eye className="h-5 w-5" />
-                Preview Review Form
-              </CardTitle>
-              <CardDescription>
-                This is how customers will see your review collection page
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ReviewPreview subaccountId={params.subaccountId} />
-            </CardContent>
-          </Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* QR Code Generation Panel */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <QrCodeIcon className="h-5 w-5" />
+                  QR Code for Review Page
+                </CardTitle>
+                <CardDescription>
+                  Share this QR code for easy access to your public review page.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="flex flex-col items-center justify-center space-y-4">
+                <div className="p-4 border rounded-lg bg-white">
+                  <QRCode
+                    value={reviewPageUrl}
+                    size={256}
+                    level="H"
+                    renderAs="canvas"
+                    id="reviewQRCode"
+                  />
+                </div>
+                <Button
+                  onClick={() => {
+                    const canvas = document.getElementById('reviewQRCode') as HTMLCanvasElement;
+                    if (canvas) {
+                      const pngUrl = canvas.toDataURL('image/png');
+                      const downloadLink = document.createElement('a');
+                      downloadLink.href = pngUrl;
+                      downloadLink.download = `${subaccount.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}-review-qr.png`;
+                      document.body.appendChild(downloadLink);
+                      downloadLink.click();
+                      document.body.removeChild(downloadLink);
+                      toast.success('QR Code downloaded!');
+                    } else {
+                      toast.error('Failed to generate QR Code for download.');
+                    }
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download QR Code
+                </Button>
+                <p className="text-sm text-muted-foreground text-center break-all">
+                  Scan to review: <Link href={reviewPageUrl} target="_blank" className="text-blue-600 hover:underline">{reviewPageUrl}</Link>
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Review Preview Card */}
+            <Card className="flex flex-col items-center justify-center p-4">
+              <CardHeader className="text-center">
+                <CardTitle className="flex items-center gap-2 justify-center">
+                  <Eye className="h-5 w-5" />
+                  Preview Review Form
+                </CardTitle>
+                <CardDescription>
+                  This is how customers will see your review collection page
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="w-full max-w-md">
+                <ReviewPreview subaccountId={params.subaccountId} disableSubmit={true} />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">

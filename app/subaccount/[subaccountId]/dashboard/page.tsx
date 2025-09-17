@@ -24,9 +24,14 @@ export default async function SubaccountDashboardPage({
   }
 
   // Get subaccount details with reviews
+  // MODIFIED: Also fetch 'reviews' related to the subaccount
   const { data: subaccount, error: subaccountError } = await supabaseAdmin
     .from('subaccounts')
-    .select('id, name')
+    .select(`
+      id, 
+      name,
+      reviews (*)
+    `)
     .eq('id', params.subaccountId)
     .single();
 
@@ -41,7 +46,8 @@ export default async function SubaccountDashboardPage({
     .eq('subaccount_id', params.subaccountId)
     .single();
 
-  // Get recent reviews
+  // Get recent reviews (this query is now redundant if subaccount.reviews is used)
+  // I'll keep it for now but the DashboardCharts will use subaccount.reviews
   const { data: reviews } = await supabaseAdmin
     .from('reviews')
     .select('*')
@@ -52,12 +58,14 @@ export default async function SubaccountDashboardPage({
   const reviewList = reviews || [];
 
   // Calculate review stats
-  const totalReviews = reviewList.length;
+  // Use subaccount.reviews for calculations to avoid inconsistencies
+  const reviewsForStats = subaccount.reviews || [];
+  const totalReviews = reviewsForStats.length;
   const averageRating = totalReviews > 0 
-    ? reviewList.reduce((sum, review) => sum + review.rating, 0) / totalReviews 
+    ? reviewsForStats.reduce((sum, review) => sum + review.rating, 0) / totalReviews 
     : 0;
-  const positiveReviews = reviewList.filter(r => r.rating >= 4).length;
-  const recentReviews = reviewList.slice(0, 5);
+  const positiveReviews = reviewsForStats.filter(r => r.rating >= 4).length;
+  const recentReviews = reviewsForStats.slice(0, 5);
 
   return (
     <div className="p-6 space-y-6">
@@ -130,7 +138,7 @@ export default async function SubaccountDashboardPage({
       </div>
 
       {/* Charts */}
-      <DashboardCharts reviews={subaccount.reviews} />
+      <DashboardCharts reviews={subaccount.reviews || []} />
 
       {/* Recent Reviews */}
       <Card>
@@ -149,7 +157,7 @@ export default async function SubaccountDashboardPage({
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center space-x-2 mb-2">
-                        <span className="font-medium">{review.customerName}</span>
+                        <span className="font-medium">{review.customer_name}</span>
                         <div className="flex">
                           {Array.from({ length: 5 }).map((_, i) => (
                             <Star

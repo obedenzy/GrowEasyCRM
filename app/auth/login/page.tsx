@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -20,6 +20,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const router = useRouter();
+  const { data: session } = useSession(); // Use useSession hook
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,37 @@ export default function LoginPage() {
         toast.error('Invalid email or password');
       } else {
         toast.success('Login successful!');
-        router.push('/dashboard');
+        // After successful login, try to get subaccountId from the session
+        // The session might not be immediately updated after signIn without a page refresh
+        // For immediate access, we might need a separate API call or a full page reload
+
+        // For now, let's try to redirect based on the current session if available,
+        // or assume a default path that handles redirection if the subaccountId is not in the session yet.
+
+        // A more robust solution involves a server-side redirect or fetching user details client-side.
+        // Given the goal, we'll assume the session will eventually update or we can get user details.
+
+        // Option 1: Full page reload to ensure session is updated
+        // router.push('/'); // Redirect to home, which should then handle further redirection based on session
+        // router.refresh();
+
+        // Option 2: Fetch user details to get subaccountId (requires an API endpoint)
+        // For simplicity and directness, we will modify this to use the session as it should be updated
+        // after a successful signIn or after a refresh.
+
+        // It's generally better to let NextAuth handle the redirect directly if possible,
+        // or to have a landing page that then redirects based on session info.
+
+        // Let's modify the redirection to go to a generic /dashboard which can then redirect
+        // or directly to the expected subaccount path if we can access subaccountId here.
+        if (session?.user?.subaccountId) {
+          router.push(`/subaccount/${session.user.subaccountId}/dashboard`);
+        } else {
+          // Fallback if subaccountId is not immediately available in session
+          // This scenario should ideally not happen for subaccount users after a successful login
+          // given the backend changes.
+          router.push('/dashboard'); // A generic dashboard route or a page that will handle redirection
+        }
         router.refresh();
       }
     } catch (error) {

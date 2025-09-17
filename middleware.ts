@@ -6,13 +6,13 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   
   // Allow public paths without any auth checks
+  // Removed '/' from public paths to handle redirection for logged-in users.
   if (
     pathname.startsWith('/api/auth') ||
     pathname.startsWith('/api/reviews') || // Public review API endpoints
     pathname.startsWith('/auth') ||
     pathname.startsWith('/_next') ||
     pathname.startsWith('/reviews') || // Public review collection pages
-    pathname === '/' ||
     pathname.startsWith('/favicon') ||
     pathname.includes('.')
   ) {
@@ -25,6 +25,18 @@ export async function middleware(request: NextRequest) {
   // Require authentication for all protected routes
   if (!token) {
     return NextResponse.redirect(new URL('/auth/login', request.url));
+  }
+
+  // Redirect logged-in users from root (/) to their respective dashboards
+  if (pathname === '/') {
+    if (token.role === 'AGENCY_ADMIN' && token.agencyId) {
+      return NextResponse.redirect(new URL(`/agency/${token.agencyId}/dashboard`, request.url));
+    } else if ((token.role === 'SUBACCOUNT_USER' || token.role === 'SUBACCOUNT_ADMIN') && token.subaccountId) {
+      return NextResponse.redirect(new URL(`/subaccount/${token.subaccountId}/dashboard`, request.url));
+    }
+    // If for some reason no specific dashboard is found, redirect to a generic /dashboard
+    // or an appropriate fallback for logged-in users.
+    return NextResponse.redirect(new URL('/dashboard', request.url));
   }
 
   // Agency routes - only for agency admins
@@ -48,8 +60,8 @@ export async function middleware(request: NextRequest) {
       // Agency admins need to verify the subaccount belongs to their agency
       // This will be validated server-side in the actual components
       return NextResponse.next();
-    } else if (token.role === 'SUBACCOUNT_USER') {
-      // Subaccount users can only access their own subaccount
+    } else if (token.role === 'SUBACCOUNT_USER' || token.role === 'SUBACCOUNT_ADMIN') {
+      // Subaccount users (admin or standard) can only access their own subaccount
       if (token.subaccountId !== subaccountIdFromPath) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
       }
@@ -58,11 +70,11 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Dashboard redirects based on role
+  // Dashboard redirects based on role (already handled by the '/' redirect now)
   if (pathname === '/dashboard') {
     if (token.role === 'AGENCY_ADMIN' && token.agencyId) {
       return NextResponse.redirect(new URL(`/agency/${token.agencyId}/dashboard`, request.url));
-    } else if (token.role === 'SUBACCOUNT_USER' && token.subaccountId) {
+    } else if ((token.role === 'SUBACCOUNT_USER' || token.role === 'SUBACCOUNT_ADMIN') && token.subaccountId) {
       return NextResponse.redirect(new URL(`/subaccount/${token.subaccountId}/dashboard`, request.url));
     }
   }

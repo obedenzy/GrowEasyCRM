@@ -14,7 +14,8 @@ import {
   Building,
   Settings,
   UserCircle,
-  BarChart3
+  BarChart3,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,7 +49,7 @@ const getAgencyNavigation = (agencyId: string) => [
   },
 ];
 
-const getSubaccountNavigation = (subaccountId: string) => [
+const getSubaccountNavigation = (subaccountId: string, userId?: string) => [
   {
     name: 'Dashboard',
     href: `/subaccount/${subaccountId}/dashboard`,
@@ -70,6 +71,16 @@ const getSubaccountNavigation = (subaccountId: string) => [
     icon: Users,
   },
   {
+    name: 'Users',
+    href: `/subaccount/${subaccountId}/users`,
+    icon: Users,
+  },
+  {
+    name: 'Profile',
+    href: userId ? `/subaccount/${subaccountId}/users/${userId}/profile` : '#', // Dynamically include userId
+    icon: User,
+  },
+  {
     name: 'Settings',
     href: `/subaccount/${subaccountId}/settings`,
     icon: Settings,
@@ -77,7 +88,7 @@ const getSubaccountNavigation = (subaccountId: string) => [
 ];
 
 interface SidebarProps {
-  userRole?: 'AGENCY_ADMIN' | 'SUBACCOUNT_USER';
+  userRole?: 'AGENCY_ADMIN' | 'SUBACCOUNT_USER' | 'SUBACCOUNT_ADMIN';
   agencyId?: string;
   subaccountId?: string;
 }
@@ -95,7 +106,8 @@ export default function Sidebar({ userRole, agencyId, subaccountId }: SidebarPro
     if (agencyId && !subaccountId) {
       return getAgencyNavigation(agencyId);
     } else if (subaccountId) {
-      return getSubaccountNavigation(subaccountId);
+      // Pass the current user's ID to getSubaccountNavigation for the Profile link
+      return getSubaccountNavigation(subaccountId, session.user.id);
     }
     
     return [];

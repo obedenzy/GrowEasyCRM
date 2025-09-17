@@ -4,10 +4,10 @@
 -- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- Create custom types for enums
-CREATE TYPE agency_role AS ENUM ('AGENCY_ADMIN', 'AGENCY_MEMBER');
-CREATE TYPE subaccount_role AS ENUM ('SUBACCOUNT_ADMIN', 'SUBACCOUNT_USER');
-CREATE TYPE review_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+-- Create custom types for enums (removed as they already exist or will be created by Supabase)
+-- CREATE TYPE agency_role AS ENUM ('AGENCY_ADMIN', 'AGENCY_MEMBER');
+-- CREATE TYPE subaccount_role AS ENUM ('SUBACCOUNT_ADMIN', 'SUBACCOUNT_USER');
+-- CREATE TYPE review_status AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
 
 -- Create users table (NextAuth compatible)
 CREATE TABLE IF NOT EXISTS users (
@@ -91,6 +91,7 @@ CREATE TABLE IF NOT EXISTS user_agency_memberships (
 );
 
 -- Create subaccounts table
+-- Each subaccount represents a business and is associated with an agency.
 CREATE TABLE IF NOT EXISTS subaccounts (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     agency_id UUID NOT NULL REFERENCES agencies(id) ON DELETE CASCADE,
@@ -120,6 +121,7 @@ CREATE TABLE IF NOT EXISTS subaccount_settings (
 );
 
 -- Create subaccount users table
+-- Links users to specific subaccounts with defined roles (admin or standard user)
 CREATE TABLE IF NOT EXISTS subaccount_users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -190,11 +192,23 @@ CREATE TRIGGER update_user_profiles_updated_at BEFORE UPDATE ON user_profiles FO
 CREATE TRIGGER update_reviews_updated_at BEFORE UPDATE ON reviews FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert seed data for testing
-INSERT INTO agencies (id, name, slug, status, logo, website) VALUES 
+-- Default Agency: All new subaccounts will be associated with this agency if not explicitly specified.
+INSERT INTO agencies (id, name, slug, status, logo, website) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', 'Demo Agency', 'demo-agency', 'active', 'https://images.pexels.com/photos/3184454/pexels-photo-3184454.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', 'https://demo-agency.com')
 ON CONFLICT (slug) DO NOTHING;
 
-INSERT INTO subaccounts (agency_id, name, slug, status, logo, website, contact_email, contact_phone) VALUES 
+-- Default Agency Admin User
+-- Password for 'admin@groweasy.com' is 'adminpassword' (bcrypt hash)
+INSERT INTO users (id, email, name, password, email_verified) VALUES
+('550e8400-e29b-41d4-a716-446655440001', 'admin@groweasy.com', 'Agency Admin', '$2b$10$N80zMq88yyYJhMi2YxsyY.fo/p9/Yvue1BlZCQIa3jxTY/oH0huZu', NOW())
+ON CONFLICT (email) DO NOTHING;
+
+-- Link default agency admin user to the default agency
+INSERT INTO user_agency_memberships (user_id, agency_id, role) VALUES
+('550e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 'AGENCY_ADMIN')
+ON CONFLICT (user_id, agency_id) DO NOTHING;
+
+INSERT INTO subaccounts (agency_id, name, slug, status, logo, website, contact_email, contact_phone) VALUES
 ('550e8400-e29b-41d4-a716-446655440000', 'Bella Vista Restaurant', 'bella-vista-restaurant', 'active', 'https://images.pexels.com/photos/1640777/pexels-photo-1640777.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', 'https://bellavista.com', 'info@bellavista.com', '+1-555-BELLA'),
 ('550e8400-e29b-41d4-a716-446655440000', 'Luxury Salon & Spa', 'luxury-salon-spa', 'active', 'https://images.pexels.com/photos/3993212/pexels-photo-3993212.jpeg?auto=compress&cs=tinysrgb&w=200&h=200&dpr=1', 'https://luxurysalonspa.com', 'info@luxurysalonspa.com', '+1-555-SPA')
 ON CONFLICT (agency_id, slug) DO NOTHING;

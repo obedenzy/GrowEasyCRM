@@ -10,11 +10,11 @@ declare module 'next-auth' {
   interface Session extends DefaultSession {
     user: {
       id: string;
-      role: string;
+      role: string; // This will now reflect the primary role (e.g., SUBACCOUNT_ADMIN)
       agencyId?: string;
       subaccountId?: string;
-      agencyRole?: string;
-      subaccountRole?: string;
+      agencyRole?: string; // Specific role within agency membership
+      subaccountRole?: string; // Specific role within subaccount access
     } & DefaultSession['user'];
   }
 
@@ -38,6 +38,8 @@ declare module 'next-auth/jwt' {
     subaccountRole?: string;
   }
 }
+
+// console.log('NEXTAUTH_SECRET in lib/auth.ts:', process.env.NEXTAUTH_SECRET); // Removed after debugging
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -100,29 +102,29 @@ export const authOptions: NextAuthOptions = {
           const agencyMembership = agencyMemberships?.[0];
           const subaccountAccessItem = subaccountAccess?.[0];
           
-          let role = 'USER';
-          let agencyId = undefined;
-          let subaccountId = undefined;
-          let agencyRole = undefined;
-          let subaccountRole = undefined;
+          let primaryRole: string = 'USER'; // Default role
+          let userAgencyId: string | undefined = undefined;
+          let userSubaccountId: string | undefined = undefined;
+          let userAgencyRole: string | undefined = undefined;
+          let userSubaccountRole: string | undefined = undefined;
 
           if (agencyMembership) {
-            role = 'AGENCY_USER';
-            agencyId = agencyMembership.agency_id;
-            agencyRole = agencyMembership.role;
-            
-            if (agencyMembership.role === 'AGENCY_ADMIN') {
-              role = 'AGENCY_ADMIN';
-            }
+            userAgencyId = agencyMembership.agency_id;
+            userAgencyRole = agencyMembership.role; // e.g., 'AGENCY_MEMBER', 'AGENCY_ADMIN'
+            // Always set agencyId if membership exists, regardless of primary role
+            // This ensures it's available for checks in middleware/API routes
           }
 
           if (subaccountAccessItem) {
-            subaccountId = subaccountAccessItem.subaccount_id;
-            subaccountRole = subaccountAccessItem.role;
-            
-            if (!agencyMembership) {
-              role = 'SUBACCOUNT_USER';
-            }
+            userSubaccountId = subaccountAccessItem.subaccount_id;
+            userSubaccountRole = subaccountAccessItem.role; // e.g., 'SUBACCOUNT_ADMIN', 'SUBACCOUNT_USER'
+          }
+
+          // Prioritize subaccount role for the main 'role' field if subaccount access exists
+          if (userSubaccountRole) {
+            primaryRole = userSubaccountRole; // This will be 'SUBACCOUNT_ADMIN' or 'SUBACCOUNT_USER'
+          } else if (userAgencyRole) {
+            primaryRole = userAgencyRole; // Fallback to agency role if no subaccount role
           }
 
           return {
@@ -130,11 +132,11 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             name: user.name,
             image: user.image,
-            role,
-            agencyId,
-            subaccountId,
-            agencyRole,
-            subaccountRole,
+            role: primaryRole, // Use the determined primary role
+            agencyId: userAgencyId, // Ensure agencyId is set if found
+            subaccountId: userSubaccountId,
+            agencyRole: userAgencyRole,
+            subaccountRole: userSubaccountRole,
           };
         } catch (error) {
           console.error('Auth error:', error);

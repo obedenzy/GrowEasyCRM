@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { Star, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
@@ -18,8 +17,7 @@ export default function RegisterPage() {
     email: '',
     password: '',
     confirmPassword: '',
-    role: 'subaccount_admin',
-    businessName: '',
+    subaccountName: '', // Changed from businessName to subaccountName
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -130,7 +128,7 @@ export default function RegisterPage() {
 
           <Card className="border-0 shadow-xl bg-white">
             <CardHeader className="text-center">
-              <CardTitle className="text-2xl font-bold text-gray-900">Create Account</CardTitle>
+              <CardTitle className="text-2xl font-bold text-gray-900">Create Your Business Account</CardTitle>
               <CardDescription className="text-gray-600">
                 Get started with your reputation management journey
               </CardDescription>
@@ -138,7 +136,7 @@ export default function RegisterPage() {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="name">Full Name</Label>
+                  <Label htmlFor="name">Your Full Name</Label>
                   <Input
                     id="name"
                     type="text"
@@ -164,28 +162,13 @@ export default function RegisterPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="role">Account Type</Label>
-                  <Select value={formData.role} onValueChange={(value) => handleInputChange('role', value)}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select account type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="subaccount_admin">Business Owner</SelectItem>
-                      <SelectItem value="agency_admin">Agency Administrator</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="businessName">
-                    {formData.role === 'agency_admin' ? 'Agency Name' : 'Business Name'}
-                  </Label>
+                  <Label htmlFor="subaccountName">Business Name</Label>
                   <Input
-                    id="businessName"
+                    id="subaccountName"
                     type="text"
-                    placeholder={formData.role === 'agency_admin' ? 'Enter your agency name' : 'Enter your business name'}
-                    value={formData.businessName}
-                    onChange={(e) => handleInputChange('businessName', e.target.value)}
+                    placeholder="Enter your business name"
+                    value={formData.subaccountName}
+                    onChange={(e) => handleInputChange('subaccountName', e.target.value)}
                     required
                     className="h-11"
                   />
