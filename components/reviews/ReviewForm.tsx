@@ -18,7 +18,8 @@ interface SubaccountSettings {
   thankYouMessage: string | null;
 }
 
-export function ReviewForm({ subaccountId, isPreview = false }: { subaccountId: string; isPreview?: boolean }) {
+// Add disableSubmit prop to the component props
+export function ReviewForm({ subaccountId, isPreview = false, disableSubmit = false }: { subaccountId: string; isPreview?: boolean; disableSubmit?: boolean }) {
   const [rating, setRating] = useState(0);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [formData, setFormData] = useState({
@@ -106,7 +107,7 @@ export function ReviewForm({ subaccountId, isPreview = false }: { subaccountId: 
         }
       } else {
         // Negative review - captured privately
-        toast.success(settings?.thankYouMessage || 'Thank you for your feedback! We value your input and will use it to improve.');
+        toast.success(settings?.thankYouMessage || 'Thank you for your feedback! We value your input and will use it to improve our service.');
       }
       
       setIsSubmitted(true);
@@ -294,7 +295,7 @@ export function ReviewForm({ subaccountId, isPreview = false }: { subaccountId: 
               <Button
                 type="submit"
                 className="w-full h-11 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
-                disabled={isSubmitting}
+                disabled={isSubmitting || disableSubmit} {/* Apply disableSubmit prop here */}
               >
                 {isSubmitting ? 'Submitting...' : 'Submit Review'}
               </Button>
